@@ -1,107 +1,51 @@
-#!/usr/bin/python3
-# imports
 import hashlib
-import base64
-import os
-from cryptography.fernet import Fernet
 
-# functions
 
-# Used to write to the default file generated when the program is first started.
-def writeDefaultFile():
-    o = open("passwords", "w")
-    o.write("This is a file for passwordmanager.\n")
-    o.close()
+def hash_password(password):
+    """
+    Hash a password for storing.
+    :param password: The password to be hashed
+    :type password: str
+    :return: A hashed password
+    :rtype: str
+    """
+    return hashlib.sha256(password.encode()).hexdigest()
 
-# Encodes the passwords file into UTF-8
-def encodeFile():
-    o = open("passwords", "r")
-    file = o.read()
-    encoded = file.encode("utf-8")
-    o.close()
- 
-# Presents options menu for the user.
-def userChoice():
-    choice = int(input("1. Query for password.\n2. Add password to database.\nWhat do you wish to do?"))
-    return choice 
 
-# Encrypts the data fed into it using the Fernet key.
-def encryptData(message):
-    f = Fernet(key)
-    encrypt = f.encrypt(message)
-    return encrypt
+def verify_password(password, hashed_password):
+    """
+    Verify a stored password against one provided by user
+    :param password: The password provided by the user
+    :type password: str
+    :param hashed_password: A stored password
+    :type hashed_password: str
+    :return: True if the password is correct, False otherwise
+    :rtype: bool
+    """
+    return hash_password(password) == hashed_password
 
-# Gets and decrypts the data inside the passwords file, then returns the output.
-def getContents():
-    o = open("passwords", "r")
-    encryptedContents = o.open()
-    encryptedContentsBytes = encryptedContents.encode()
-    f = Fernet(key)
-    contents = f.decrypt(encryptedContentsBytes)
-    return contents
 
-# Sets a global variable called key, generates a hash from the users password, 
-# and cuts it down to 32 characters (length of the key required by Fernet), then encodes the hash into a URL-safe, base64 format. (The format required by Fernet)
-def setKey():
-    global key
-    password = input("Password?")
-    keyHash = hashlib.sha256(password.encode()).digest()[0:32]
-    print(keyHash)
-    key = base64.urlsafe_b64encode(keyHash)
-    print(key)
+# save the password hash to the file
+def save_password(password_hash):
+    with open("passwords.txt", "a") as file:
+        file.write(password_hash + "\n")
 
-# Used when the user is trying to retreive an entry from their passwords file.
-# Gets a query, decrypts the main passwords file, then searches it and prints out all matching results.
-def getEntry():
-    query = input("Query here:")
-    with open("passwords", "r+") as o:
-        entries = o.read()
-        f = Fernet(key)
-        entriesFile = f.decrypt(entries)
-        for line in entriesFile():
-            if query in line:
-                print(line)
+# open the file and check if the password is in the file
+def check_password(password_hash):
+    with open("passwords.txt", "r") as file:
+        for line in file:
+            if password_hash == line.strip():
+                return True
+        return False
 
-# Used when the user wishes to add an entry to their passwords file.
-# Gets all relevant information, concatenates it, opens the passwords file and writes the new line, encrypted with the key defined in keySet.
-def addEntry():
-    ident = input("What is the website/identifier?")
-    email = input("What is the email/username?")
-    passw = input("What is the password?")
-    concatStr = ("\n" + ident + "," + email + "," + passw)
-    with open("passwords", "r+") as o:
-        f = Fernet(key)
-        encrypted = f.encrypt(concatStr)
-        o.write(encrypted)
-
-# Initial function to be run to detect if the required file "passwords" is present.
-# If the required file is not present, it is created, initial message written and encoded, then encrypted.
-def fileCheck():
-    if not os.path.isfile('passwords'):
-        os.mknod('passwords')
-        passwordInit = input("Please create a password:")
-        passwordInitEncoded = passwordInit.encode("utf-8")
-        encHash = hashlib.sha256(passwordInitEncoded).digest()
-        writeDefaultFile()
-        encodeFile()
-#       with open("passwords", "r+") as o:
-#           contents = o.read
-#           encContents = encryptData(contents)
-#           o.write(encContents)
+# test the functions
+if __name__ == "__main__":
+    password = input("Enter a password: ")
+    password_hash = hash_password(password)
+    save_password(password_hash)
+    print("saved password")
+    password = input("Enter the password again: ")
+    if check_password(hash_password(password)):
+        print("You entered the correct password")
     else:
-        pass
-
-# Main function, simple interpreter of the choice made in userChoice. Exits if the choice is invalid...
-def main(userChoice):
-    if userChoice == 1:
-        getEntry()
-    elif userChoice == 2:
-        addEntry()
-    else:
-        print("Invalid input. Exiting...")
-
-# Main set of function calls.
-fileCheck()
-setKey()
-choice = userChoice()
-main(choice)
+        print("I'm sorry but the password does not match")
